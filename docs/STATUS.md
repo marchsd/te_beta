@@ -4,7 +4,7 @@
 | # | Scope | State |
 |---|-------|-------|
 | 1 | Window detection, geometry, transform, tracker, mock, debug map, tests | DONE (Linux-verified; needs one run on real Windows) |
-| 2 | Research + decision: read TerrariaModder repo/docs and tModLoader; verify tile/collision/transparent-render feasibility; finalize ARCHITECTURE.md | TODO |
+| 2 | Research + decision | DONE for the decision (Option A, see ARCHITECTURE.md); transparency/render feasibility still UNVERIFIED, needs a spike on real Windows |
 | 3 | World model: stable-id platforms, occlusion, tombstones, mined-tile overlay (+tests) | TODO |
 | 4 | Versioned named-pipe protocol + heartbeats/reconnect (+tests) | TODO |
 | 5 | Minimal playable prototype (player physics on geometry, W/S in interiors, mining) possibly with a stand-in renderer | TODO |
@@ -21,3 +21,9 @@ NuGet was unreachable in the authoring sandbox; builds used `-p:RestoreSources=<
 ## Update (checkpoint 2)
 M3 (world model), M4 (protocol + pipe bridge), M5 (headless sim) are DONE and tested on Linux (65 tests).
 Overlay (M6) and Terraria mod (M7) are NOT done yet at this checkpoint.
+
+## Update (checkpoint 3: M2 decision)
+Chose TerrariaModder (1.4.5.8, net48, 32-bit XNA/D3D9) with a "tile mirror" design; tModLoader is still on 1.4.4.
+Nothing was run against a real Terraria. Next: write a minimal net48 mod spike that (1) writes mirrored tiles,
+(2) tries the overlay transparency options in ARCHITECTURE.md, and report which works. The sandbox has no Windows or
+Terraria, so that spike must be run by you; build it here, test on your machine.
