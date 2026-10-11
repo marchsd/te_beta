@@ -1,0 +1,14 @@
+{
+  "id": "overlay-spike",
+  "name": "Overlay Spike",
+  "version": "0.1.0",
+  "author": "Solyn",
+  "description": "Test pattern + window-style experiments to find out whether Terraria's XNA window can be see-through.",
+  "entry_dll": "OverlaySpike.dll",
+  "multiplayer": "client-only",
+  "keybinds": [
+    { "id": "cycle_mode", "label": "Cycle window mode", "description": "Off > Borderless > ColorKey > DwmAlpha > Off", "default": "F7" },
+    { "id": "toggle_pattern", "label": "Toggle test pattern", "description": "Show/hide the A/B/C test strips", "default": "F8" },
+    { "id": "toggle_clickthrough", "label": "Toggle click-through", "description": "Let mouse clicks pass to windows below", "default": "F9" }
+  ]
+}

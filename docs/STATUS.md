@@ -27,3 +27,8 @@ Chose TerrariaModder (1.4.5.8, net48, 32-bit XNA/D3D9) with a "tile mirror" desi
 Nothing was run against a real Terraria. Next: write a minimal net48 mod spike that (1) writes mirrored tiles,
 (2) tries the overlay transparency options in ARCHITECTURE.md, and report which works. The sandbox has no Windows or
 Terraria, so that spike must be run by you; build it here, test on your machine.
+
+## Update (checkpoint 4)
+`scripts\list.ps1` verified on real Windows 11 (7 windows, correct work-area and DPI 96). OverlaySpike mod written
+(terraria-mod/OverlaySpike); compile-checked only against stub types, NOT against real Terraria assemblies, and not
+run. Next: user runs docs/SPIKE_RESULTS.md and reports.
