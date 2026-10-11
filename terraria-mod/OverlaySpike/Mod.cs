@@ -31,11 +31,16 @@ namespace OverlaySpike
         public override void Initialize(ModContext context)
         {
             _log = context.Logger;
-            context.RegisterKeybind("cycle_mode", "Cycle window mode", "Off > Borderless > ColorKey > DwmAlpha", "F7", CycleMode);
-            context.RegisterKeybind("toggle_pattern", "Toggle test pattern", "Show/hide test strips", "F8", TogglePattern);
-            context.RegisterKeybind("toggle_clickthrough", "Toggle click-through", "Clicks pass to windows below", "F9", ToggleClickThrough);
+            context.RegisterKeybind("cycle_mode", "Cycle window mode", "Off > Borderless > ColorKey > DwmAlpha", "NumPad7", CycleMode);
+            context.RegisterKeybind("toggle_pattern", "Toggle test pattern", "Show/hide test strips", "NumPad8", TogglePattern);
+            context.RegisterKeybind("toggle_clickthrough", "Toggle click-through", "Clicks pass to windows below", "NumPad9", ToggleClickThrough);
+            context.RegisterKeybind("dump_methods", "Dump draw methods", "Write OverlaySpike-dump.txt", "NumPad0", DoDump);
+            context.RegisterKeybind("toggle_desktop", "Desktop mode", "Empty world + your windows as terrain + transparent overlay", "NumPad1", ToggleDesktop);
             FrameEvents.OnPostDraw += OnPostDraw;
-            _log.Info("OverlaySpike ready. F7 = cycle window mode, F8 = test pattern, F9 = click-through.");
+            FrameEvents.OnPreUpdate += OnPreFrame;
+            FrameEvents.OnPreDraw += OnPreFrame;
+            FrameEvents.OnPostUpdate += OnPostUpdate;
+            _log.Info("OverlaySpike ready. NumPad7 = cycle window mode, NumPad8 = test pattern, NumPad9 = click-through, NumPad0 = dump draw methods, NumPad1 = DESKTOP MODE.");
         }
 
         public void OnContentReady(ModContext context) { }
@@ -45,12 +50,58 @@ namespace OverlaySpike
         public override void Unload()
         {
             FrameEvents.OnPostDraw -= OnPostDraw;
+            FrameEvents.OnPreUpdate -= OnPreFrame;
+            FrameEvents.OnPreDraw -= OnPreFrame;
+            FrameEvents.OnPostUpdate -= OnPostUpdate;
+            try { if (_desk) { _desk = false; _tiles?.Stop(); } } catch { }
+            try { WorldHider.Uninstall(); } catch { }
             try { _mode = 0; _clickThrough = false; Apply(); } catch (Exception ex) { _log?.Warn("Unload restore failed: " + ex.Message); }
         }
 
         private void CycleMode() { _mode = (_mode + 1) % ModeNames.Length; SafeApply(); }
         private void TogglePattern() { _pattern = !_pattern; _log.Info("Test pattern: " + (_pattern ? "ON" : "OFF")); }
         private void ToggleClickThrough() { _clickThrough = !_clickThrough; SafeApply(); }
+
+        private DesktopTiles _tiles;
+        private bool _desk;
+
+        private void OnPreFrame() { if (_desk && _tiles != null) _tiles.OnFrame(); }
+        private void OnPostUpdate() { if (_desk && _tiles != null) _tiles.Tick(); }
+
+        private void ToggleDesktop()
+        {
+            try
+            {
+                if (_desk)
+                {
+                    _desk = false;
+                    WorldHider.Uninstall();
+                    if (_tiles != null) _tiles.Stop();
+                    _mode = 0; _clickThrough = false; Apply();
+                    _log.Info("Desktop mode OFF. The world was modified in memory and will NOT be saved (save guard stays on). Quit without saving.");
+                    return;
+                }
+                if (Main.gameMenu || Main.LocalPlayer == null) { _log.Warn("Enter a world first (use a throwaway world)."); return; }
+                WorldHider.Install(_log);
+                if (!WorldHider.SaveGuardInstalled) { _log.Error("REFUSING desktop mode: could not install the world-save guard, so your world could be overwritten."); return; }
+                WorldHider.Wiped = true;               // from this moment on, saving is blocked until the game closes
+                _mode = 3; Apply();                    // borderless + DWM alpha transparency (verified working in the spike)
+                if (_tiles == null) _tiles = new DesktopTiles(_log);
+                if (!_tiles.Start()) { _mode = 0; Apply(); return; }
+                WorldHider.CameraPx = _tiles.CameraPx;
+                WorldHider.CameraLock = true;
+                WorldHider.Active = true;
+                _desk = true;
+                _log.Info("Desktop mode ON.");
+            }
+            catch (Exception ex) { _log.Error("ToggleDesktop failed: " + ex); }
+        }
+
+        private void DoDump()
+        {
+            try { _log.Info("Dump written to: " + Dump.WriteFile()); }
+            catch (Exception ex) { _log.Error("Dump failed: " + ex); }
+        }
 
         private void SafeApply()
         {

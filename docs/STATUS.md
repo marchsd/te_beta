@@ -32,3 +32,15 @@ Terraria, so that spike must be run by you; build it here, test on your machine.
 `scripts\list.ps1` verified on real Windows 11 (7 windows, correct work-area and DPI 96). OverlaySpike mod written
 (terraria-mod/OverlaySpike); compile-checked only against stub types, NOT against real Terraria assemblies, and not
 run. Next: user runs docs/SPIKE_RESULTS.md and reports.
+
+## Update (checkpoint 5)
+Spike result: DwmAlpha transparency WORKS (user screenshot). Dump of 1.4.5.8 draw code received; patch targets taken from it.
+OverlaySpike v0.3 adds WorldHider (Harmony skip of tile/wall/sky/bg draws + black clear -> transparent). Compile-checked
+against stubs only; not yet run. Risk: 1.4.5 renders layers via WorldSceneLayerTarget render targets; leftovers possible.
+
+## Update (checkpoint 6)
+OverlaySpike v0.4: NumPad1 = desktop mode: save-guard, transparent window, camera lock, UI/sky/tile draw skipped,
+region wiped to air, tile mirror from real windows (title 2 rows + 1-tile borders, interior air), per-window mined-hole
+memory, boundary walls/floor, ~6 Hz resync. Prototype reads windows inside the mod (companion/pipe path deferred).
+Compile-checked against stubs only; NOT run. Not done: W/S in interiors, occlusion, click-through, enemy spawning hotkey,
+DPI-unaware coordinates, companion link.
