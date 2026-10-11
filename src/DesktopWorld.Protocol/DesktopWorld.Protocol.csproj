@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Source is written in conservative C# (no records, no nullable annotations, no Span) so the same files can be
+       linked into the .NET Framework 4.8 Terraria mod. See terraria-mod/README.md. -->
+  <PropertyGroup>
+    <RootNamespace>DesktopWorld.Protocol</RootNamespace>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+</Project>

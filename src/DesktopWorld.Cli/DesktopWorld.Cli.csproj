@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>deskworld</AssemblyName>
+    <RootNamespace>DesktopWorld.Cli</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopWorld.Core\DesktopWorld.Core.csproj" />
+    <ProjectReference Include="..\DesktopWorld.Windows\DesktopWorld.Windows.csproj" />
+  </ItemGroup>
+</Project>

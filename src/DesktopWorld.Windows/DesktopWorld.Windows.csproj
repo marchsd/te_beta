@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pure P/Invoke (no WinForms/WPF), so it compiles on any OS but only RUNS on Windows. -->
+  <PropertyGroup><RootNamespace>DesktopWorld.Windows</RootNamespace></PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\DesktopWorld.Core\DesktopWorld.Core.csproj" /></ItemGroup>
+</Project>

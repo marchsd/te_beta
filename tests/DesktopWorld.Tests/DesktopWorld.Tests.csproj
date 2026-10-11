@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Dependency free test runner (xunit and NUnit need NuGet). Run with dotnet run, project tests/DesktopWorld.Tests -->
+  <PropertyGroup><OutputType>Exe</OutputType><RootNamespace>DesktopWorld.Tests</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DesktopWorld.Core\DesktopWorld.Core.csproj" />
+    <ProjectReference Include="..\..\src\DesktopWorld.Bridge\DesktopWorld.Bridge.csproj" />
+  </ItemGroup>
+</Project>

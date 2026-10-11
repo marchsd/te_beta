@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>DesktopWorld.Core</RootNamespace></PropertyGroup>
+</Project>

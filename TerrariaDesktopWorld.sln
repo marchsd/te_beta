@@ -1,0 +1,64 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{303C7CF9-E83E-4675-BED3-3CD38FBCED2A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Cli", "src\DesktopWorld.Cli\DesktopWorld.Cli.csproj", "{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Core", "src\DesktopWorld.Core\DesktopWorld.Core.csproj", "{6823356A-A722-47B9-95BA-39EFF5657FB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Windows", "src\DesktopWorld.Windows\DesktopWorld.Windows.csproj", "{05133E9F-FD14-435B-B7E3-941BABC3AB2A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{58B94FE1-E5D1-4D04-A69F-43B25311DE9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Tests", "tests\DesktopWorld.Tests\DesktopWorld.Tests.csproj", "{691E7262-962F-4DBD-938B-DB41837500C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Protocol", "src\DesktopWorld.Protocol\DesktopWorld.Protocol.csproj", "{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWorld.Bridge", "src\DesktopWorld.Bridge\DesktopWorld.Bridge.csproj", "{3D087859-C9E3-4525-AF28-0E7E9CDA1128}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6823356A-A722-47B9-95BA-39EFF5657FB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6823356A-A722-47B9-95BA-39EFF5657FB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6823356A-A722-47B9-95BA-39EFF5657FB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6823356A-A722-47B9-95BA-39EFF5657FB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05133E9F-FD14-435B-B7E3-941BABC3AB2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05133E9F-FD14-435B-B7E3-941BABC3AB2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05133E9F-FD14-435B-B7E3-941BABC3AB2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05133E9F-FD14-435B-B7E3-941BABC3AB2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{691E7262-962F-4DBD-938B-DB41837500C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{691E7262-962F-4DBD-938B-DB41837500C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{691E7262-962F-4DBD-938B-DB41837500C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{691E7262-962F-4DBD-938B-DB41837500C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D087859-C9E3-4525-AF28-0E7E9CDA1128}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D087859-C9E3-4525-AF28-0E7E9CDA1128}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D087859-C9E3-4525-AF28-0E7E9CDA1128}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D087859-C9E3-4525-AF28-0E7E9CDA1128}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1DB47046-DAA3-45F3-85EA-BB0F7E053FC0} = {303C7CF9-E83E-4675-BED3-3CD38FBCED2A}
+		{6823356A-A722-47B9-95BA-39EFF5657FB6} = {303C7CF9-E83E-4675-BED3-3CD38FBCED2A}
+		{05133E9F-FD14-435B-B7E3-941BABC3AB2A} = {303C7CF9-E83E-4675-BED3-3CD38FBCED2A}
+		{691E7262-962F-4DBD-938B-DB41837500C9} = {58B94FE1-E5D1-4D04-A69F-43B25311DE9D}
+		{57E2AD9F-5071-4B9A-868E-9AE3DFC6E6C9} = {303C7CF9-E83E-4675-BED3-3CD38FBCED2A}
+		{3D087859-C9E3-4525-AF28-0E7E9CDA1128} = {303C7CF9-E83E-4675-BED3-3CD38FBCED2A}
+	EndGlobalSection
+EndGlobal

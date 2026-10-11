@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>DesktopWorld.Bridge</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopWorld.Protocol\DesktopWorld.Protocol.csproj" />
+    <ProjectReference Include="..\DesktopWorld.Core\DesktopWorld.Core.csproj" />
+  </ItemGroup>
+</Project>
