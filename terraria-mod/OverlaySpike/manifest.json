@@ -1,7 +1,7 @@
 {
   "id": "overlay-spike",
   "name": "Overlay Spike",
-  "version": "0.4.0",
+  "version": "0.4.6",
   "author": "Solyn",
   "description": "Test pattern + window-style experiments to find out whether Terraria's XNA window can be see-through.",
   "entry_dll": "OverlaySpike.dll",
@@ -30,6 +30,12 @@
       "label": "Dump draw methods",
       "description": "Write OverlaySpike-dump.txt to the Terraria folder",
       "default": "NumPad0"
+    },
+    {
+      "id": "spawn_enemy",
+      "label": "Spawn enemy",
+      "description": "Spawn a zombie near the player (desktop mode)",
+      "default": "NumPad2"
     },
     {
       "id": "toggle_desktop",

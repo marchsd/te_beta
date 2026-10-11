@@ -35,6 +35,7 @@ namespace OverlaySpike
             context.RegisterKeybind("toggle_pattern", "Toggle test pattern", "Show/hide test strips", "NumPad8", TogglePattern);
             context.RegisterKeybind("toggle_clickthrough", "Toggle click-through", "Clicks pass to windows below", "NumPad9", ToggleClickThrough);
             context.RegisterKeybind("dump_methods", "Dump draw methods", "Write OverlaySpike-dump.txt", "NumPad0", DoDump);
+            context.RegisterKeybind("spawn_enemy", "Spawn enemy", "Spawn a zombie near the player (desktop mode)", "NumPad2", SpawnEnemy);
             context.RegisterKeybind("toggle_desktop", "Desktop mode", "Empty world + your windows as terrain + transparent overlay", "NumPad1", ToggleDesktop);
             FrameEvents.OnPostDraw += OnPostDraw;
             FrameEvents.OnPreUpdate += OnPreFrame;
@@ -53,6 +54,7 @@ namespace OverlaySpike
             FrameEvents.OnPreUpdate -= OnPreFrame;
             FrameEvents.OnPreDraw -= OnPreFrame;
             FrameEvents.OnPostUpdate -= OnPostUpdate;
+            try { _hot?.Stop(); } catch { }
             try { if (_desk) { _desk = false; _tiles?.Stop(); } } catch { }
             try { WorldHider.Uninstall(); } catch { }
             try { _mode = 0; _clickThrough = false; Apply(); } catch (Exception ex) { _log?.Warn("Unload restore failed: " + ex.Message); }
@@ -64,8 +66,49 @@ namespace OverlaySpike
 
         private DesktopTiles _tiles;
         private bool _desk;
+        private GlobalHotkeys _hot;
+        private volatile bool _pendingExit;
+        private readonly object _applyLock = new object();
 
-        private void OnPreFrame() { if (_desk && _tiles != null) _tiles.OnFrame(); }
+        private void OnPreFrame()
+        {
+            if (_pendingExit) { _pendingExit = false; if (_desk) ToggleDesktop(); return; }
+            if (_desk && _tiles != null) _tiles.OnFrame();
+        }
+
+        private void SpawnEnemy()
+        {
+            try
+            {
+                if (!_desk || _tiles == null) { _log.Warn("Spawn: enter desktop mode first (NumPad1)."); return; }
+                _tiles.SpawnEnemy();
+            }
+            catch (Exception ex) { _log.Error("SpawnEnemy failed: " + ex); }
+        }
+
+        // Ctrl+Alt+G (runs on the hotkey thread; only Win32 calls). Game = Terraria takes input. Desktop = click-through, so
+        // your apps work; Terraria pauses by itself once it loses focus. Press again to give Terraria the screen back.
+        private void HotToggle()
+        {
+            if (!_desk) return;
+            _clickThrough = !_clickThrough;
+            SafeApply();
+            if (!_clickThrough)
+            {
+                IntPtr h = Process.GetCurrentProcess().MainWindowHandle;
+                if (h != IntPtr.Zero) SetForegroundWindow(h);
+            }
+            _log.Info("Hotkey: " + (_clickThrough ? "DESKTOP mode (click-through, your apps get the mouse)" : "GAME mode (Terraria takes input)"));
+        }
+
+        // Ctrl+Alt+Q: window back to normal immediately; the world side is cleaned up on the next game frame.
+        private void HotExit()
+        {
+            _clickThrough = false; _mode = 0;
+            SafeApply();
+            _pendingExit = true;
+            _log.Info("Hotkey: emergency exit.");
+        }
         private void OnPostUpdate() { if (_desk && _tiles != null) _tiles.Tick(); }
 
         private void ToggleDesktop()
@@ -76,6 +119,7 @@ namespace OverlaySpike
                 {
                     _desk = false;
                     WorldHider.Uninstall();
+                    try { _hot?.Stop(); } catch { }
                     if (_tiles != null) _tiles.Stop();
                     _mode = 0; _clickThrough = false; Apply();
                     _log.Info("Desktop mode OFF. The world was modified in memory and will NOT be saved (save guard stays on). Quit without saving.");
@@ -89,10 +133,13 @@ namespace OverlaySpike
                 if (_tiles == null) _tiles = new DesktopTiles(_log);
                 if (!_tiles.Start()) { _mode = 0; Apply(); return; }
                 WorldHider.CameraPx = _tiles.CameraPx;
+                WorldHider.IsWindowTile = _tiles.IsWindowTile;
                 WorldHider.CameraLock = true;
                 WorldHider.Active = true;
                 _desk = true;
-                _log.Info("Desktop mode ON.");
+                if (_hot == null) _hot = new GlobalHotkeys(_log, HotToggle, HotExit);
+                _hot.Start();
+                _log.Info("Desktop mode ON. Ctrl+Alt+G = game/desktop toggle, Ctrl+Alt+Q = emergency exit, NumPad2 = spawn enemy.");
             }
             catch (Exception ex) { _log.Error("ToggleDesktop failed: " + ex); }
         }
@@ -109,7 +156,9 @@ namespace OverlaySpike
             catch (Exception ex) { _log.Error("Apply failed (mode " + _mode + "): " + ex); }
         }
 
-        private void Apply()
+        private void Apply() { lock (_applyLock) { ApplyUnlocked(); } }
+
+        private void ApplyUnlocked()
         {
             IntPtr hwnd = Process.GetCurrentProcess().MainWindowHandle;
             if (hwnd == IntPtr.Zero) { _log.Warn("No main window handle yet."); return; }
@@ -214,6 +263,7 @@ namespace OverlaySpike
         [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr hWnd, out RECT r);
         [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
         [DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte alpha, uint flags);
+        [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS m);
         #endregion
     }

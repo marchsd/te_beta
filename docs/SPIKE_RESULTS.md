@@ -73,3 +73,26 @@ mouse clicks go to Terraria while active (not click-through); 100% DPI scaling a
 
 Report: screenshot, what's wrong, and the log (look for lines starting "Skip-patch", "Camera-lock", "Save-guard",
 "DesktopTiles", "Clear-patch").
+
+## Step 5 (v0.4.1): use it
+Build with `.\scripts\build-spike.ps1`, launch with TerrariaInjector, enter a THROWAWAY world, NumLock on, Terraria windowed 1920x1080 at 100% DPI.
+
+| Key | Action |
+|-----|--------|
+| NumPad1 | Desktop mode on/off (transparent overlay, your windows become terrain) |
+| A / D / Space | walk / jump (normal Terraria) |
+| W / S | climb up / down while your character is inside a window's interior |
+| Left click (pickaxe, slot 2) | mine a title bar / border tile |
+| NumPad2 | spawn a Zombie next to you |
+| **Ctrl+Alt+G** | works from anywhere: toggle GAME (Terraria takes input) <-> DESKTOP (click-through, your apps get the mouse; Terraria pauses when unfocused) |
+| **Ctrl+Alt+Q** | emergency exit: normal window immediately, desktop mode off |
+
+Send back from `Terraria\TerrariaModder\core\logs\` (newest file) every line containing: `Scene-target`, `WorldSceneLayerTarget members`,
+`Scene targets:`, `Clear-patch`, `Global hotkeys`, `SpawnEnemy`, `Climb`, ERROR, WARN. Plus a screenshot.
+
+### If you get stuck (v0.4.2)
+Ctrl+Alt+Q = emergency exit from anywhere. Ctrl+Alt+G = click-through so your apps work. Alt+Tab still works; the overlay stays on top.
+Report log lines containing: `Erase`, `Scene targets`, `floor row`, `player placed`, `Rescue`, ERROR, WARN.
+
+### v0.4.3 report lines
+`Draw-gate`, `Erase pass #1`, `Erase will also clear`, `Main static RenderTarget2D fields`, ERROR, WARN, plus a screenshot.

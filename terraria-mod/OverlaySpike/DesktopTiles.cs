@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -31,6 +32,11 @@ namespace OverlaySpike
         private readonly Dictionary<long, int> _lastSeen = new Dictionary<long, int>();
         private int _tick;
         private int _frames;
+        private readonly List<Rectangle> _interiors = new List<Rectangle>();   // screen px, rebuilt on every Sync
+        private bool _spawnFlip;
+        private int _floorRow;
+        private int _stuck;
+        private int _lastWinCount = -1;
 
         public DesktopTiles(ILogger log) { _log = log; }
 
@@ -47,6 +53,18 @@ namespace OverlaySpike
             OriginTileY = Math.Max(60, (int)Main.worldSurface - GridH - 40);
             _log.Info("DesktopTiles: screen " + Main.screenWidth + "x" + Main.screenHeight + " -> grid " + GridW + "x" + GridH
                 + ", origin tile (" + OriginTileX + "," + OriginTileY + "), worldSurface " + (int)Main.worldSurface);
+
+            // Floor = top of the Windows taskbar (work area bottom), so the character is standing on screen, not below it.
+            RECT wa = new RECT(); int bottom = Main.screenHeight;
+            try { if (SystemParametersInfo(0x30, 0, ref wa, 0) && wa.B > 0) bottom = wa.B; } catch { }
+            _floorRow = Math.Max(4, Math.Min(GridH - 1, FloorDiv(bottom, Ts)));
+            _log.Info("DesktopTiles: floor row " + _floorRow + " (work area bottom " + bottom + " px)");
+
+            int mw = GetSystemMetrics(0), mh = GetSystemMetrics(1);
+            if (mw != Main.screenWidth || mh != Main.screenHeight)
+                _log.Warn("DesktopTiles: Terraria client is " + Main.screenWidth + "x" + Main.screenHeight + " but the primary monitor is " + mw + "x" + mh
+                    + ". Window terrain will be misaligned. Set Terraria to windowed at the monitor's resolution (and 100% display scaling).");
+            else _log.Info("DesktopTiles: Terraria client matches the primary monitor (" + mw + "x" + mh + ").");
 
             WipeRegion();
             _applied.Clear(); _mined.Clear(); _lastSeen.Clear(); _tick = 0;
@@ -80,9 +98,27 @@ namespace OverlaySpike
         private void SpawnPlayer()
         {
             Player p = Main.LocalPlayer;
-            p.position = new Vector2(CameraPx.X + Main.screenWidth / 2f, CameraPx.Y + 20f);
+            Vector2 v;
+            if (FindFreeSpot(p, out v)) p.position = v;
+            else p.position = new Vector2(CameraPx.X + Main.screenWidth / 2f, CameraPx.Y + 40f);
             p.velocity = Vector2.Zero;
             p.fallStart = (int)(p.position.Y / Ts);
+            _log.Info("DesktopTiles: player placed at screen px (" + (int)(p.position.X - CameraPx.X) + "," + (int)(p.position.Y - CameraPx.Y) + ")");
+        }
+
+        // First spot (scanning down from the top, middle of the screen outwards) where the player's hitbox overlaps no solid tile.
+        private bool FindFreeSpot(Player p, out Vector2 pos)
+        {
+            int w = p.width, h = p.height;
+            int[] dxs = { 0, -120, 120, -240, 240, -480, 480, -720, 720 };
+            for (int k = 0; k < dxs.Length; k++)
+                for (int sy = 8; sy < Main.screenHeight - h - 8; sy += 8)
+                {
+                    Vector2 v = new Vector2(CameraPx.X + Main.screenWidth / 2f + dxs[k] - w / 2f, CameraPx.Y + sy);
+                    if (!Collision.SolidCollision(v, w, h)) { pos = v; return true; }
+                }
+            pos = Vector2.Zero;
+            return false;
         }
 
         // ---------------- per-frame ----------------
@@ -97,8 +133,96 @@ namespace OverlaySpike
             if (!Running) return;
             Player p = Main.LocalPlayer;
             if (p != null && p.velocity.Y > 0f) p.fallStart = (int)(p.position.Y / Ts);   // no fall damage on this toy
-            if (++_frames % 10 != 0) return;
+            try { AxeSwing(p); } catch (Exception ex) { if (!_axeErr) { _axeErr = true; _log.Error("AxeSwing failed: " + ex.Message); } }
+            try
+            {
+                // Rescue: a window dragged over the player (or a bad spawn) must never leave them stuck inside solid tiles.
+                if (p != null && Collision.SolidCollision(p.position, p.width, p.height))
+                {
+                    if (++_stuck >= 20)
+                    {
+                        _stuck = 0;
+                        Vector2 v;
+                        if (FindFreeSpot(p, out v)) { p.position = v; p.velocity = Vector2.Zero; _log.Info("Rescue: player was inside window tiles, moved out."); }
+                    }
+                }
+                else _stuck = 0;
+            }
+            catch (Exception ex) { if (!_rescueErr) { _rescueErr = true; _log.Error("Rescue failed: " + ex.Message); } }
+            if (++_frames % 4 != 0) return;
             try { Sync(); } catch (Exception ex) { _log.Error("DesktopTiles.Sync failed: " + ex); }
+        }
+
+        // Window tiles are one-way PLATFORMS (tile type 19): stand on them, jump up through them from below (W / Space), hold S to drop
+        // through. No flying. Breaking: pickaxes go through the KillTile hook (instant, no drop); axes can't mine non-wood tiles in
+        // vanilla, so a swing with an axe breaks the window tile under the cursor here.
+        private bool _axeErr, _rescueErr;
+        private int _prevAnim;
+
+        public bool IsWindowTile(int wx, int wy)
+        {
+            if (!Running) return false;
+            Cell c;
+            return _applied.TryGetValue(Key(wx - OriginTileX, wy - OriginTileY), out c) && c.Owner != 0;
+        }
+
+        private void AxeSwing(Player p)
+        {
+            if (p == null) return;
+            int anim = p.itemAnimation;
+            bool newSwing = anim > _prevAnim;      // animation counter jumps up when a swing starts
+            _prevAnim = anim;
+            if (!newSwing) return;
+            Item it = p.HeldItem;
+            if (it == null || it.axe <= 0) return;
+            int tx = Player.tileTargetX, ty = Player.tileTargetY;
+            if (!IsWindowTile(tx, ty)) return;
+            float dx = (tx * Ts + 8f) - p.Center.X, dy = (ty * Ts + 8f) - p.Center.Y;
+            if (dx * dx + dy * dy > 112f * 112f) return;
+            WorldGen.KillTile(tx, ty, false, false, true);
+        }
+
+        // Spawns a Zombie (NPC type 2) beside the player, inside the screen. NPC.NewNPC is called by reflection so the
+        // exact 1.4.5 overload is discovered, not guessed; if it can't be found this logs why and does nothing.
+        public void SpawnEnemy()
+        {
+            Player p = Main.LocalPlayer;
+            if (p == null) return;
+            _spawnFlip = !_spawnFlip;
+            float x = p.Center.X + (_spawnFlip ? 240f : -240f);
+            float minX = CameraPx.X + 48f, maxX = CameraPx.X + Main.screenWidth - 48f;
+            if (x < minX) x = minX; if (x > maxX) x = maxX;
+            int ix = (int)x, iy = (int)(p.Center.Y - 40f);
+
+            MethodInfo best = null;
+            foreach (MethodInfo m in typeof(NPC).GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (m.Name != "NewNPC") continue;
+                ParameterInfo[] ps = m.GetParameters();
+                if (ps.Length >= 4 && ps[0].ParameterType.Name == "IEntitySource") { best = m; break; }
+            }
+            if (best == null) { _log.Warn("SpawnEnemy: NPC.NewNPC(IEntitySource, ...) overload not found."); return; }
+
+            ParameterInfo[] pars = best.GetParameters();
+            object[] args = new object[pars.Length];
+            int ints = 0;
+            for (int i = 0; i < pars.Length; i++)
+            {
+                Type pt = pars[i].ParameterType;
+                if (i == 0) args[i] = null;
+                else if (pt == typeof(int))
+                {
+                    ints++;
+                    if (ints == 1) args[i] = ix;
+                    else if (ints == 2) args[i] = iy;
+                    else if (ints == 3) args[i] = 2;       // Zombie
+                    else args[i] = pars[i].HasDefaultValue ? pars[i].DefaultValue : 0;
+                }
+                else if (pars[i].HasDefaultValue) args[i] = pars[i].DefaultValue;
+                else args[i] = pt.IsValueType ? Activator.CreateInstance(pt) : null;
+            }
+            object r = best.Invoke(null, args);
+            _log.Info("SpawnEnemy: NPC.NewNPC returned " + r + " at pixel (" + ix + "," + iy + ")");
         }
 
         // ---------------- sync ----------------
@@ -128,51 +252,62 @@ namespace OverlaySpike
 
             // 2) desired solid cells
             var desired = new Dictionary<long, Cell>();
-            foreach (WinRect w in wins)
+            _interiors.Clear();
+            for (int wi = 0; wi < wins.Count; wi++)
             {
+                WinRect w = wins[wi];
                 _lastSeen[w.Hwnd] = _tick;
                 HashSet<long> mined; _mined.TryGetValue(w.Hwnd, out mined);
                 int cx0 = FloorDiv(w.L, Ts), cx1 = CeilDiv(w.R, Ts) - 1, cy0 = FloorDiv(w.T, Ts), cy1 = CeilDiv(w.B, Ts) - 1;
                 int cw = cx1 - cx0 + 1, ch = cy1 - cy0 + 1;
-                if (cw < 3 || ch < TitleRows + 2) continue;
+                if (cw < 3 || ch < 3) continue;
                 for (int ox = 0; ox < cw; ox++)
                     for (int oy = 0; oy < ch; oy++)
                     {
-                        bool solid = oy < TitleRows || oy == ch - 1 || ox == 0 || ox == cw - 1;
+                        // one-tile platform outline: top edge (title bar), bottom edge, left and right edges
+                        bool solid = oy == 0 || oy == ch - 1 || ox == 0 || ox == cw - 1;
                         if (!solid) continue;
                         int sx = cx0 + ox, sy = cy0 + oy;
                         if (sx < 0 || sy < 0 || sx >= GridW || sy >= GridH) continue;
                         if (mined != null && mined.Contains(OffKey(ox, oy))) continue;
+                        // occlusion: a cell hidden behind a window that is higher in the z-order is not terrain
+                        int px = sx * Ts + Ts / 2, py = sy * Ts + Ts / 2;
+                        bool hidden = false;
+                        for (int a = 0; a < wi; a++)
+                            if (px >= wins[a].L && px < wins[a].R && py >= wins[a].T && py < wins[a].B) { hidden = true; break; }
+                        if (hidden) continue;
                         long key = Key(sx, sy);
                         if (!desired.ContainsKey(key)) desired[key] = new Cell { Owner = w.Hwnd, OffX = ox, OffY = oy };
                     }
             }
             // invisible screen boundary: side walls and a floor below the screen
-            for (int y = -2; y <= GridH + 1; y++) { desired[Key(-1, y)] = new Cell(); desired[Key(GridW, y)] = new Cell(); }
-            for (int x = -1; x <= GridW; x++) desired[Key(x, GridH + 1)] = new Cell();
+            for (int y = -2; y <= _floorRow + 1; y++) { desired[Key(-1, y)] = new Cell(); desired[Key(GridW, y)] = new Cell(); }
+            for (int x = -1; x <= GridW; x++) desired[Key(x, _floorRow)] = new Cell();
+
+            if (wins.Count != _lastWinCount) { _lastWinCount = wins.Count; _log.Info("DesktopTiles: " + wins.Count + " window(s) mirrored as one-way platforms (occluded parts skipped)."); }
 
             // 3) apply diff
             var remove = new List<long>();
             foreach (KeyValuePair<long, Cell> kv in _applied)
                 if (!desired.ContainsKey(kv.Key) || desired[kv.Key].Owner != kv.Value.Owner || desired[kv.Key].OffX != kv.Value.OffX || desired[kv.Key].OffY != kv.Value.OffY)
                     remove.Add(kv.Key);
-            foreach (long k in remove) { int sx, sy; Unkey(k, out sx, out sy); SetTile(sx, sy, false); _applied.Remove(k); }
+            foreach (long k in remove) { int sx, sy; Unkey(k, out sx, out sy); SetTile(sx, sy, false, 0); _applied.Remove(k); }
             foreach (KeyValuePair<long, Cell> kv in desired)
-                if (!_applied.ContainsKey(kv.Key)) { int sx, sy; Unkey(kv.Key, out sx, out sy); SetTile(sx, sy, true); _applied[kv.Key] = kv.Value; }
+                if (!_applied.ContainsKey(kv.Key)) { int sx, sy; Unkey(kv.Key, out sx, out sy); SetTile(sx, sy, true, kv.Value.Owner == 0 ? (ushort)1 : (ushort)19); _applied[kv.Key] = kv.Value; }
 
             // 4) forget mined holes of windows gone for ~1 minute
             var drop = new List<long>();
-            foreach (KeyValuePair<long, int> kv in _lastSeen) if (_tick - kv.Value > 360) drop.Add(kv.Key);
+            foreach (KeyValuePair<long, int> kv in _lastSeen) if (_tick - kv.Value > 900) drop.Add(kv.Key);
             foreach (long h in drop) { _lastSeen.Remove(h); _mined.Remove(h); }
         }
 
-        private void SetTile(int sx, int sy, bool solid)
+        private void SetTile(int sx, int sy, bool solid, ushort type)
         {
             int wx = OriginTileX + sx, wy = OriginTileY + sy;
             if (wx < 1 || wy < 1 || wx >= Main.maxTilesX - 1 || wy >= Main.maxTilesY - 1) return;
             var t = Main.tile[wx, wy];
             if (t == null) return;
-            if (solid) { t.type = (ushort)1; t.active(true); t.slope(0); t.liquid = 0; }
+            if (solid) { t.type = type; t.frameX = 0; t.frameY = 0; t.active(true); t.slope(0); t.halfBrick(false); t.liquid = 0; }
             else { t.active(false); }
         }
 
@@ -191,7 +326,7 @@ namespace OverlaySpike
             var cls = new StringBuilder(64);
             EnumWindows(delegate (IntPtr h, IntPtr lp)
             {
-                if (list.Count >= 40) return false;
+                if (list.Count >= 25) return false;
                 if (!IsWindowVisible(h) || IsIconic(h)) return true;
                 uint pid; GetWindowThreadProcessId(h, out pid);
                 if (pid == self) return true;
@@ -212,6 +347,8 @@ namespace OverlaySpike
         }
 
         [StructLayout(LayoutKind.Sequential)] private struct RECT { public int L, T, R, B; }
+        [DllImport("user32.dll")] private static extern bool SystemParametersInfo(uint action, uint param, ref RECT rect, uint winIni);
+        [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
         [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc p, IntPtr lp);
         [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr h);
